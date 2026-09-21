@@ -77,6 +77,15 @@ erDiagram
         users_id int FK
     }
 
+    testimonials {
+        id_testimonial int PK
+        text string
+        name string
+        job string
+        profile string
+        users_id int FK
+    }
+
 
     Users ||--o{ cart : have
     events ||--o{ cart : container
@@ -93,7 +102,8 @@ erDiagram
     Users ||--o{ community_members : join
     community ||--o{ community_members : have
 
-    Users ||--o{ notifications : notif
+    Users ||--o{ notifications : receives
+    Users ||--o{ testimonials : writes
 ```
 
 ![https://dbdiagram.io/d/koda-b9-database-6aafed6c943b561dd493eaa3](./images/dbDiagram.png)
