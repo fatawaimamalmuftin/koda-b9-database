@@ -103,26 +103,18 @@ erDiagram
 
     event_discusstion }o--|| events : have
     event_discusstion }o--|| Users : have
-    
     Users ||--o{ cart : have
     events ||--o{ cart : container
-
     events ||--o{ event_categories : have
     categories ||--o{ event_categories : have
-
     community ||--o{ events : organizer
-
     events ||--o{ event_speakers : have
     speaker ||--o{ event_speakers : join
-
     community ||--o{ community_categories : have
     categories ||--o{ community_categories : have
-
     Users ||--o{ community : createe
-
     Users ||--o{ community_members : join
     community ||--o{ community_members : have
-
     Users ||--o{ notifications : get
     Users ||--o{ testimonials : write
 ```
