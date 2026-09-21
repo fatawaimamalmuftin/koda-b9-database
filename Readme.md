@@ -5,15 +5,15 @@ erDiagram
         fullName string
         email string
         password string
-        confirmPassword string
-        agree bool
         bio string
         location string
         profile string
+        job string
         created_at datetime
+        update_at datetime
     }
 
-    cart {
+    user_event {
         users_id int FK
         events_id int FK
     }
@@ -58,8 +58,6 @@ erDiagram
         title string
         images string
         description string
-        members int
-        upcoming int
         users_id int FK
     }
 
@@ -71,6 +69,7 @@ erDiagram
     community_members {
         community_id int FK
         users_id int FK
+        created_at datetime
     }
 
     notifications {
@@ -79,22 +78,19 @@ erDiagram
         description string
         datetime datetime
         type string
-        is_read datetime
+        read_at datetime
         users_id int FK
     }
 
     testimonials {
         id_testimonial int PK
         text string
-        name string
-        job string
-        profile string
         users_id int FK
     }
 
     event_discusstion {
         id_discuss int PK
-        massage text
+        message text
         created_at timestamp
         event_id int 
         user_id int

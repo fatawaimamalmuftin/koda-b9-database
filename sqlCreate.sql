@@ -1,17 +1,30 @@
+CREATE TYPE "event_format" AS ENUM (
+  'in person',
+  'online'
+);
+
+CREATE TYPE "type_icon" AS ENUM (
+  'event',
+  'register',
+  'community',
+  'update',
+  'message'
+);
+
 CREATE TABLE "Users" (
   "id_users" int PRIMARY KEY,
   "fullName" varchar,
   "email" varchar,
   "password" varchar,
-  "confirmPassword" varchar,
-  "agree" boolean,
   "bio" text,
   "location" varchar,
-  "profile" text,
-  "created_at" datetime
+  "profile" varchar,
+  "job" varchar,
+  "created_at" datetime,
+  "update_at" datetime
 );
 
-CREATE TABLE "cart" (
+CREATE TABLE "user_event" (
   "users_id" int NOT NULL,
   "events_id" int NOT NULL
 );
@@ -37,7 +50,7 @@ CREATE TABLE "events" (
   "attendees" int,
   "capacity" int,
   "description" text,
-  "eventFormat" varchar,
+  "eventFormat" event_format,
   "community_id" int NOT NULL
 );
 
@@ -56,9 +69,7 @@ CREATE TABLE "community" (
   "title" varchar,
   "images" text,
   "description" text,
-  "members" int,
-  "upcoming" int,
-  "users_id" int NOT NULL
+  "users_id" int
 );
 
 CREATE TABLE "community_categories" (
@@ -68,7 +79,8 @@ CREATE TABLE "community_categories" (
 
 CREATE TABLE "community_members" (
   "community_id" int NOT NULL,
-  "users_id" int NOT NULL
+  "users_id" int NOT NULL,
+  "created_at" datetime
 );
 
 CREATE TABLE "notifications" (
@@ -76,31 +88,28 @@ CREATE TABLE "notifications" (
   "title" varchar,
   "description" text,
   "time" datetime,
-  "type" varchar,
-  "is_read" datetime,
+  "type" type_icon,
+  "read_at" datetime,
   "users_id" int NOT NULL
 );
 
 CREATE TABLE "testimonials" (
   "id_testimonial" int PRIMARY KEY,
   "text" text,
-  "name" varchar,
-  "job" varchar,
-  "profile" varchar,
   "users_id" int NOT NULL
 );
 
 CREATE TABLE "event_discusstion" (
   "id_discuss" int PRIMARY KEY,
-  "massage" text,
+  "message" text,
   "created_at" timestamp,
   "event_id" int NOT NULL,
   "user_id" int NOT NULL
 );
 
-ALTER TABLE "cart" ADD FOREIGN KEY ("users_id") REFERENCES "Users" ("id_users") DEFERRABLE INITIALLY IMMEDIATE;
+ALTER TABLE "user_event" ADD FOREIGN KEY ("users_id") REFERENCES "Users" ("id_users") DEFERRABLE INITIALLY IMMEDIATE;
 
-ALTER TABLE "cart" ADD FOREIGN KEY ("events_id") REFERENCES "events" ("id_event") DEFERRABLE INITIALLY IMMEDIATE;
+ALTER TABLE "user_event" ADD FOREIGN KEY ("events_id") REFERENCES "events" ("id_event") DEFERRABLE INITIALLY IMMEDIATE;
 
 ALTER TABLE "events" ADD FOREIGN KEY ("community_id") REFERENCES "community" ("id_community") DEFERRABLE INITIALLY IMMEDIATE;
 
