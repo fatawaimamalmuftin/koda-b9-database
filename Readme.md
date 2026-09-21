@@ -7,7 +7,7 @@ erDiagram
         email string
         password string
         confirmPassword string
-        agree boolean
+        agree bool
         bio string
         location string
         profile string
@@ -22,7 +22,7 @@ erDiagram
     speaker {
         id_speaker int PK
         name string
-        title string
+        pocition_job string
     }
 
     categories {
@@ -34,16 +34,19 @@ erDiagram
         id_event int PK
         title string
         images string
-        date date
-        time startTime
-        time endTime
+        startTime datetime
+        endTime datetime
         location string
         attendees int
         capacity int
         description string
         eventFormat string
-        categories_id int FK
         community_id int FK
+    }
+
+    event_categories {
+        event_id int FK
+        category_id int FK
     }
 
     event_speakers {
@@ -58,8 +61,12 @@ erDiagram
         description string
         members int
         upcoming int
-        categories_id int FK
         users_id int FK
+    }
+
+    community_categories {
+        community_id int FK
+        category_id int FK
     }
 
     community_members {
@@ -71,9 +78,9 @@ erDiagram
         id_notification int PK
         title string
         description string
-        time datetime
+        datetime datetime
         type string
-        unread boolean
+        is_read datetime
         users_id int FK
     }
 
@@ -86,24 +93,38 @@ erDiagram
         users_id int FK
     }
 
+    event_discusstion {
+        id_discuss int PK
+        massage text
+        created_at timestamp
+        event_id int 
+        user_id int
+    }
 
+    event_discusstion }o--|| events : have
+    event_discusstion }o--|| Users : have
+    
     Users ||--o{ cart : have
     events ||--o{ cart : container
 
-    categories ||--o{ events : categories
-    community ||--o{ events : organizes
+    events ||--o{ event_categories : have
+    categories ||--o{ event_categories : have
 
-    speaker ||--o{ event_speakers : join
+    community ||--o{ events : organizer
+
     events ||--o{ event_speakers : have
+    speaker ||--o{ event_speakers : join
 
-    categories ||--o{ community : categories
+    community ||--o{ community_categories : have
+    categories ||--o{ community_categories : have
 
-    Users ||--o{ community : create
+    Users ||--o{ community : createe
+
     Users ||--o{ community_members : join
     community ||--o{ community_members : have
 
-    Users ||--o{ notifications : receives
-    Users ||--o{ testimonials : writes
+    Users ||--o{ notifications : get
+    Users ||--o{ testimonials : write
 ```
 
 ![https://dbdiagram.io/d/koda-b9-database-6aafed6c943b561dd493eaa3](./images/dbDiagram.png)
