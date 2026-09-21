@@ -1,6 +1,5 @@
 ```mermaid
 erDiagram
-
     Users {
         id_users int PK
         fullName string
