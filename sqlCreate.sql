@@ -1,140 +1,160 @@
-CREATE TYPE "event_format" AS ENUM (
-  'in person',
-  'online'
+-- ENUM
+CREATE TYPE event_format AS ENUM ('in person','online');
+
+CREATE TYPE type_icon AS ENUM ('event','register','community','update','message');
+
+-- USERS
+CREATE TABLE users (
+    id_users INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    bio TEXT,
+    location VARCHAR(255),
+    profile VARCHAR(255),
+    job VARCHAR(255),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TYPE "type_icon" AS ENUM (
-  'event',
-  'register',
-  'community',
-  'update',
-  'message'
+-- SPEAKER
+CREATE TABLE speaker (
+    id_speaker INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    position_job VARCHAR(255) NOT NULL
 );
 
-CREATE TABLE "Users" (
-  "id_users" int PRIMARY KEY,
-  "fullName" varchar,
-  "email" varchar,
-  "password" varchar,
-  "bio" text,
-  "location" varchar,
-  "profile" varchar,
-  "job" varchar,
-  "created_at" datetime,
-  "update_at" datetime
+-- CATEGORIES
+CREATE TABLE categories (
+    id_categories INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name_categories VARCHAR(255) NOT NULL UNIQUE
 );
 
-CREATE TABLE "user_event" (
-  "users_id" int NOT NULL,
-  "events_id" int NOT NULL
+-- COMMUNITY
+CREATE TABLE community (
+    id_community INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title VARCHAR(150) NOT NULL,
+    images TEXT,
+    description TEXT,
+    users_id INT,
+
+    CONSTRAINT fk_community_user FOREIGN KEY (users_id) REFERENCES users(id_users)
 );
 
-CREATE TABLE "speaker" (
-  "id_speaker" int PRIMARY KEY,
-  "name" varchar,
-  "pocition_job" varchar
+-- EVENTS
+CREATE TABLE events (
+    id_event INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title VARCHAR(150) NOT NULL,
+    images TEXT,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    location VARCHAR(255),
+    attendees INT NOT NULL DEFAULT 0,
+    capacity INT NOT NULL,
+    description TEXT,
+    event_format event_format NOT NULL DEFAULT 'in person',
+    community_id INT NOT NULL,
+
+    CONSTRAINT fk_event_community FOREIGN KEY (community_id) REFERENCES community(id_community),
+
+    CONSTRAINT check_event_attendees CHECK (attendees >= 0),
+    CONSTRAINT check_event_capacity CHECK (capacity > 0),
+    CONSTRAINT check_event_attendees_capacity CHECK (attendees <= capacity),
+    CONSTRAINT check_event_time CHECK (start_time < end_time)
 );
 
-CREATE TABLE "categories" (
-  "id_categories" int PRIMARY KEY,
-  "name_categories" varchar
+-- USER EVENT
+CREATE TABLE user_event (
+    users_id INT NOT NULL,
+    events_id INT NOT NULL,
+
+    PRIMARY KEY (users_id, events_id),
+
+    CONSTRAINT fk_user_event_user FOREIGN KEY (users_id) REFERENCES users(id_users),
+
+    CONSTRAINT fk_user_event_event FOREIGN KEY (events_id) REFERENCES events(id_event)
 );
 
-CREATE TABLE "events" (
-  "id_event" int PRIMARY KEY,
-  "title" varchar,
-  "images" text,
-  "startTime" datetime,
-  "endTime" datetime,
-  "location" varchar,
-  "attendees" int,
-  "capacity" int,
-  "description" text,
-  "eventFormat" event_format,
-  "community_id" int NOT NULL
+-- EVENT CATEGORIES
+CREATE TABLE event_categories (
+    event_id INT NOT NULL,
+    category_id INT NOT NULL,
+
+    PRIMARY KEY (event_id, category_id),
+
+    CONSTRAINT fk_event_categories_event FOREIGN KEY (event_id) REFERENCES events(id_event),
+
+    CONSTRAINT fk_event_categories_category FOREIGN KEY (category_id) REFERENCES categories(id_categories)
 );
 
-CREATE TABLE "event_categories" (
-  "event_id" int NOT NULL,
-  "category_id" int NOT NULL
+-- EVENT SPEAKERS
+CREATE TABLE event_speakers (
+    event_id INT NOT NULL,
+    speaker_id INT NOT NULL,
+
+    PRIMARY KEY (event_id, speaker_id),
+
+    CONSTRAINT fk_event_speakers_event FOREIGN KEY (event_id) REFERENCES events(id_event),
+
+    CONSTRAINT fk_event_speakers_speaker FOREIGN KEY (speaker_id) REFERENCES speaker(id_speaker)
 );
 
-CREATE TABLE "event_speakers" (
-  "event_id" int NOT NULL,
-  "speaker_id" int NOT NULL
+-- COMMUNITY CATEGORIES
+CREATE TABLE community_categories (
+    community_id INT NOT NULL,
+    category_id INT NOT NULL,
+
+    PRIMARY KEY (community_id, category_id),
+
+    CONSTRAINT fk_community_categories_community FOREIGN KEY (community_id) REFERENCES community(id_community),
+
+    CONSTRAINT fk_community_categories_category FOREIGN KEY (category_id) REFERENCES categories(id_categories)
 );
 
-CREATE TABLE "community" (
-  "id_community" int PRIMARY KEY,
-  "title" varchar,
-  "images" text,
-  "description" text,
-  "users_id" int
+-- COMMUNITY MEMBERS
+CREATE TABLE community_members (
+    community_id INT NOT NULL,
+    users_id INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (community_id, users_id),
+
+    CONSTRAINT fk_community_members_community FOREIGN KEY (community_id) REFERENCES community(id_community),
+
+    CONSTRAINT fk_community_members_user FOREIGN KEY (users_id) REFERENCES users(id_users)
 );
 
-CREATE TABLE "community_categories" (
-  "community_id" int NOT NULL,
-  "category_id" int NOT NULL
+-- NOTIFICATIONS
+CREATE TABLE notifications (
+    id_notification INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title VARCHAR(150) NOT NULL,
+    description TEXT,
+    time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    type type_icon NOT NULL,
+    read_at TIMESTAMP,
+    users_id INT NOT NULL,
+
+    CONSTRAINT fk_notifications_user FOREIGN KEY (users_id) REFERENCES users(id_users)
 );
 
-CREATE TABLE "community_members" (
-  "community_id" int NOT NULL,
-  "users_id" int NOT NULL,
-  "created_at" datetime
+-- TESTIMONIALS
+CREATE TABLE testimonials (
+    id_testimonial INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    text TEXT NOT NULL,
+    users_id INT NOT NULL,
+
+    CONSTRAINT fk_testimonials_user FOREIGN KEY (users_id) REFERENCES users(id_users)
 );
 
-CREATE TABLE "notifications" (
-  "id_notification" int PRIMARY KEY,
-  "title" varchar,
-  "description" text,
-  "time" datetime,
-  "type" type_icon,
-  "read_at" datetime,
-  "users_id" int NOT NULL
+-- EVENT DISCUSSION
+CREATE TABLE event_discussion (
+    id_discuss INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    message TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    event_id INT NOT NULL,
+    user_id INT NOT NULL,
+
+    CONSTRAINT fk_event_discussion_event FOREIGN KEY (event_id) REFERENCES events(id_event),
+
+    CONSTRAINT fk_event_discussion_user FOREIGN KEY (user_id) REFERENCES users(id_users)
 );
-
-CREATE TABLE "testimonials" (
-  "id_testimonial" int PRIMARY KEY,
-  "text" text,
-  "users_id" int NOT NULL
-);
-
-CREATE TABLE "event_discusstion" (
-  "id_discuss" int PRIMARY KEY,
-  "message" text,
-  "created_at" timestamp,
-  "event_id" int NOT NULL,
-  "user_id" int NOT NULL
-);
-
-ALTER TABLE "user_event" ADD FOREIGN KEY ("users_id") REFERENCES "Users" ("id_users") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "user_event" ADD FOREIGN KEY ("events_id") REFERENCES "events" ("id_event") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "events" ADD FOREIGN KEY ("community_id") REFERENCES "community" ("id_community") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "event_categories" ADD FOREIGN KEY ("event_id") REFERENCES "events" ("id_event") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "event_categories" ADD FOREIGN KEY ("category_id") REFERENCES "categories" ("id_categories") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "event_speakers" ADD FOREIGN KEY ("event_id") REFERENCES "events" ("id_event") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "event_speakers" ADD FOREIGN KEY ("speaker_id") REFERENCES "speaker" ("id_speaker") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "community" ADD FOREIGN KEY ("users_id") REFERENCES "Users" ("id_users") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "community_categories" ADD FOREIGN KEY ("community_id") REFERENCES "community" ("id_community") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "community_categories" ADD FOREIGN KEY ("category_id") REFERENCES "categories" ("id_categories") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "community_members" ADD FOREIGN KEY ("community_id") REFERENCES "community" ("id_community") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "community_members" ADD FOREIGN KEY ("users_id") REFERENCES "Users" ("id_users") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "notifications" ADD FOREIGN KEY ("users_id") REFERENCES "Users" ("id_users") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "testimonials" ADD FOREIGN KEY ("users_id") REFERENCES "Users" ("id_users") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "event_discusstion" ADD FOREIGN KEY ("event_id") REFERENCES "events" ("id_event") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "event_discusstion" ADD FOREIGN KEY ("user_id") REFERENCES "Users" ("id_users") DEFERRABLE INITIALLY IMMEDIATE;
