@@ -1,198 +1,552 @@
--- 1 login
-SELECT 
-id_users, full_name, email, password, bio, location, profile
-FROM users 
+-- LOGIN
+SELECT
+    id_users,
+    full_name,
+    email,
+    password
+FROM users
 WHERE email = $1;
 
 
--- 2 register
+-- REGISTER
 INSERT INTO users (
-    full_name, email, password, bio, location, profile, agree
+    full_name,
+    email,
+    password
 )
+VALUES ($1, $2, $3)
+RETURNING
+    id_users,
+    full_name,
+    email;
 
 
--- 3 get event list with search n filter
-SELECT 
-co.id_community, co.title, co.images, co.description
-FROM community co
-LEFT JOIN community_categories cc
-ON co.id_community = cc.community_id
-LEFT JOIN categories c
-ON cc.category_id = c.id_categories
-WHERE $1 = '' 
-OR co.title ILIKE %$1%
-OR c.name_categories ILIKE %$1%;
+-- CHECK EMAIL
+SELECT
+    id_users
+FROM users
+WHERE email = $1;
 
 
--- 4 get detail
-SELECT 
-e.id_event, e.title, e.images, e.date, e.start_time, e.end_time, e.location, e.attendees, e.capacity, e.description, e.event_format, c.name_categories, co.id_community, co.title AS "community"
+-- FORGOT PASSWORD & CREATE NEW PASSWORD
+UPDATE users
+SET
+    password = $1,
+    update_at = CURRENT_TIMESTAMP
+WHERE email = $2;
+
+
+-- GET EVENT LIST
+SELECT
+    e.id_event,
+    e.title,
+    e.images,
+    e.start_time,
+    e.end_time,
+    e.location,
+    e.attendees,
+    e.capacity,
+    e.description,
+    e.event_format,
+    e.community_id,
+    c.title AS community_title
 FROM events e
-JOIN categories c
-ON e.categories_id = c.id_categories
-JOIN community co
-ON e.community_id = co.id_community
+JOIN community c
+    ON c.id_community = e.community_id
+ORDER BY e.start_time ASC;
+
+
+-- SEARCH EVENT
+SELECT
+    e.id_event,
+    e.title,
+    e.images,
+    e.start_time,
+    e.end_time,
+    e.location,
+    e.attendees,
+    e.capacity,
+    e.description,
+    e.event_format,
+    e.community_id,
+    c.title AS community_title
+FROM events e
+JOIN community c
+    ON c.id_community = e.community_id
+WHERE e.title ILIKE '%' || $1 || '%'
+ORDER BY e.start_time ASC;
+
+
+-- FILTER EVENT BY CATEGORY
+SELECT
+    e.id_event,
+    e.title,
+    e.images,
+    e.start_time,
+    e.end_time,
+    e.location,
+    e.attendees,
+    e.capacity,
+    e.description,
+    e.event_format,
+    e.community_id,
+    c.title AS community_title
+FROM events e
+JOIN community c
+    ON c.id_community = e.community_id
+JOIN event_categories ec
+    ON ec.event_id = e.id_event
+WHERE ec.category_id = $1
+ORDER BY e.start_time ASC;
+
+
+-- FILTER EVENT BY LOCATION
+SELECT
+    e.id_event,
+    e.title,
+    e.images,
+    e.start_time,
+    e.end_time,
+    e.location,
+    e.attendees,
+    e.capacity,
+    e.description,
+    e.event_format,
+    e.community_id,
+    c.title AS community_title
+FROM events e
+JOIN community c
+    ON c.id_community = e.community_id
+WHERE e.location ILIKE '%' || $1 || '%'
+ORDER BY e.start_time ASC;
+
+
+-- GET EVENT DETAIL
+SELECT
+    e.id_event,
+    e.title,
+    e.images,
+    e.start_time,
+    e.end_time,
+    e.location,
+    e.attendees,
+    e.capacity,
+    e.description,
+    e.event_format,
+    e.community_id,
+    c.title AS community_title,
+    c.images AS community_images
+FROM events e
+JOIN community c
+    ON c.id_community = e.community_id
 WHERE e.id_event = $1;
 
 
--- 5 join/leave event
--- join
-INSERT INTO event_members (users_id, event_id)
-VALUES ($1, %2);
--- leave
-DELETE FROM event_members
-WHERE users_id = %1
-AND event_id = $2;
+-- GET EVENT CATEGORY
+SELECT
+    c.id_categories,
+    c.name_categories
+FROM categories c
+JOIN event_categories ec
+    ON ec.category_id = c.id_categories
+WHERE ec.event_id = $1;
 
 
--- 6 get upcoming event
-SELECT 
-e.id_event, e.title, e.images, e.date, e.start_time, e.end_time, e.location
+-- GET EVENT SPEAKER
+SELECT
+    s.id_speaker,
+    s.name,
+    s.position_job
+FROM speaker s
+JOIN event_speakers es
+    ON es.speaker_id = s.id_speaker
+WHERE es.event_id = $1;
+
+
+-- JOIN EVENT
+INSERT INTO user_event (
+    users_id,
+    events_id
+)
+VALUES ($1, $2);
+
+
+-- LEAVE EVENT
+DELETE FROM user_event
+WHERE users_id = $1
+AND events_id = $2;
+
+
+-- CHECK USER EVENT
+SELECT
+    users_id,
+    events_id
+FROM user_event
+WHERE users_id = $1
+AND events_id = $2;
+
+
+-- ADD EVENT ATTENDEES
+UPDATE events
+SET
+    attendees = attendees + 1
+WHERE id_event = $1
+AND attendees < capacity;
+
+
+-- REMOVE EVENT ATTENDEES
+UPDATE events
+SET
+    attendees = attendees - 1
+WHERE id_event = $1
+AND attendees > 0;
+
+
+-- GET UPCOMING EVENT
+SELECT
+    e.id_event,
+    e.title,
+    e.images,
+    e.start_time,
+    e.end_time,
+    e.location,
+    e.attendees,
+    e.capacity,
+    e.event_format
 FROM events e
-WHERE e.date >= CURRENT_DATE
-ORDER BY e.date ASC, e.start_time ASC;
+JOIN user_event ue
+    ON ue.events_id = e.id_event
+WHERE ue.users_id = $1
+AND e.start_time > CURRENT_TIMESTAMP
+ORDER BY e.start_time ASC;
 
 
--- 7 get my event
-SELECT 
-e.id_event, e.title, e.images, e.date, e.start_time, e.end_time, e.location, e.attendees, e.capacity
-FROM cart c
-JOIN events e
-ON c.events_id = e.id_event
-WHERE c.users_id = $1
-ORDER BY e.date ASC;
+-- GET MY EVENT
+SELECT
+    e.id_event,
+    e.title,
+    e.images,
+    e.start_time,
+    e.end_time,
+    e.location,
+    e.attendees,
+    e.capacity,
+    e.event_format
+FROM events e
+JOIN user_event ue
+    ON ue.events_id = e.id_event
+WHERE ue.users_id = $1
+ORDER BY e.start_time ASC;
 
 
--- 8 get community list with search n filter
-SELECT 
-co.id_community, co.title, co.images AS "image",
-co.description, ARRAY_AGG(c.name_categories) AS "categories",
-co.members, co.upcoming
-FROM community co
+-- GET COMMUNITY LIST
+SELECT
+    c.id_community,
+    c.title,
+    c.images,
+    c.description,
+    COUNT(cm.users_id) AS total_members
+FROM community c
+LEFT JOIN community_members cm
+    ON cm.community_id = c.id_community
+GROUP BY
+    c.id_community,
+    c.title,
+    c.images,
+    c.description
+ORDER BY c.title ASC;
+
+
+-- SEARCH COMMUNITY
+SELECT
+    c.id_community,
+    c.title,
+    c.images,
+    c.description
+FROM community c
+WHERE c.title ILIKE '%' || $1 || '%'
+ORDER BY c.title ASC;
+
+
+-- FILTER COMMUNITY BY CATEGORY
+SELECT
+    c.id_community,
+    c.title,
+    c.images,
+    c.description
+FROM community c
 JOIN community_categories cc
-ON co.id_community = cc.community_id
-JOIN categories c
-ON cc.category_id = c.id_categories
-WHERE co.title ILIKE %$1%
-OR c.name_categories ILIKE %$1%
-GROUP BY co.id_community, co.title, co.images, co.description, co.members, co.upcoming
-ORDER BY co.title ASC;
+    ON cc.community_id = c.id_community
+WHERE cc.category_id = $1
+ORDER BY c.title ASC;
 
 
--- 9 get community detail
-SELECT 
-co.id_community, co.title, co.images, co.description, co.members, co.upcoming, u.id_users AS "creator_id", u.full_name AS "creator_name"
-FROM community co
-JOIN users u
-ON co.users_id = u.id_users
-WHERE co.id_community = $1;
+-- GET COMMUNITY DETAIL
+SELECT
+    c.id_community,
+    c.title,
+    c.images,
+    c.description,
+    c.users_id,
+    u.full_name AS organizer_name
+FROM community c
+LEFT JOIN users u
+    ON u.id_users = c.users_id
+WHERE c.id_community = $1;
 
 
--- 10 get popular community
-SELECT 
-co.id_community, co.title, co.images, COUNT(cm.users_id) AS "total_members"
-FROM community co
-JOIN community_members cm
-ON co.id_community = cm.community_id
-GROUP BY co.id_community, co.title, co.images
-ORDER BY total_members DESC
-LIMIT 3;
+-- GET COMMUNITY CATEGORY
+SELECT
+    c.id_categories,
+    c.name_categories
+FROM categories c
+JOIN community_categories cc
+    ON cc.category_id = c.id_categories
+WHERE cc.community_id = $1;
 
 
--- 11 Join / Leave Community
--- join
+-- GET POPULAR COMMUNITIES
+SELECT
+    c.id_community,
+    c.title,
+    c.images,
+    c.description,
+    COUNT(cm.users_id) AS total_members
+FROM community c
+LEFT JOIN community_members cm
+    ON cm.community_id = c.id_community
+GROUP BY
+    c.id_community,
+    c.title,
+    c.images,
+    c.description
+ORDER BY total_members DESC;
+
+
+-- JOIN COMMUNITY
 INSERT INTO community_members (
     community_id,
     users_id
 )
 VALUES ($1, $2);
--- leave
+
+
+-- LEAVE COMMUNITY
 DELETE FROM community_members
 WHERE community_id = $1
 AND users_id = $2;
 
 
--- 12 Get Community Member
-SELECT 
-u.id_users, u.full_name, u.profile, cm.joined_at
+-- CHECK COMMUNITY MEMBER
+SELECT
+    community_id,
+    users_id
+FROM community_members
+WHERE community_id = $1
+AND users_id = $2;
+
+
+-- GET COMMUNITY MEMBER
+SELECT
+    u.id_users,
+    u.full_name,
+    u.profile,
+    u.job,
+    cm.created_at
 FROM community_members cm
 JOIN users u
-ON cm.users_id = u.id_users
+    ON u.id_users = cm.users_id
 WHERE cm.community_id = $1
-ORDER BY cm.joined_at ASC;
+ORDER BY cm.created_at ASC;
 
 
--- 13 Get User Profile
-SELECT profile AS "profile user",
+-- GET USER PROFILE
+SELECT
+    id_users,
+    full_name,
+    email,
+    bio,
+    location,
+    profile,
+    job,
+    created_at,
+    update_at
 FROM users
 WHERE id_users = $1;
 
 
--- 14 Change User Profile
+-- CHANGE USER PROFILE
 UPDATE users
-SET password = $1
-WHERE id_users = $2
+SET
+    full_name = $1,
+    bio = $2,
+    location = $3,
+    profile = $4,
+    job = $5,
+    update_at = CURRENT_TIMESTAMP
+WHERE id_users = $6
+RETURNING
+    id_users,
+    full_name,
+    email,
+    bio,
+    location,
+    profile,
+    job,
+    update_at;
 
 
--- 15 Change Password
+-- CHANGE PASSWORD
 UPDATE users
-SET password = $1
-WHERE id_users = $2
+SET
+    password = $1,
+    update_at = CURRENT_TIMESTAMP
+WHERE id_users = $2;
 
 
--- 16 Get / Set Testimony
--- get
-SELECT 
-id_testimonial, text, name, job, profile, users_id
-FROM testimonials
-ORDER BY id_testimonial DESC;
--- set
-INSERT INTO testimonials ( text, name, job, profile, users_id )
-VALUES ( $1, $2, $3, $4, $5)
+-- GET TESTIMONY
+SELECT
+    t.id_testimonial,
+    t.text,
+    t.users_id,
+    u.full_name,
+    u.profile
+FROM testimonials t
+JOIN users u
+    ON u.id_users = t.users_id
+ORDER BY t.id_testimonial DESC;
 
 
--- 17 Get My Notification
-SELECT 
-id_notification, title, description, time, type, unread
+-- SET TESTIMONY
+INSERT INTO testimonials (
+    text,
+    users_id
+)
+VALUES ($1, $2)
+RETURNING
+    id_testimonial,
+    text,
+    users_id;
+
+
+-- GET MY NOTIFICATION
+SELECT
+    id_notification,
+    title,
+    description,
+    time,
+    type,
+    read_at
 FROM notifications
 WHERE users_id = $1
 ORDER BY time DESC;
 
 
--- 18 Get Organizer Dashboard & Information
-SELECT 
-COUNT(e.id_event) AS "Total Events", 
-SUM(e.attendees) AS "Total Attendees", 
-ROUND(SUM(e.attendees) * 100 / SUM(e.capacity) ) AS "Avg Fill Rate",
-SUM(e.views) AS "Event Views"
-FROM community co
-JOIN events e
-ON co.id_community = e.community_id
-WHERE co.creator_id = $1;
+-- GET ORGANIZER COMMUNITY
+SELECT
+    id_community,
+    title,
+    images,
+    description
+FROM community
+WHERE users_id = $1;
 
 
--- 19 Create / Edit Event
--- create
-INSERT INTO events ( 
-    title, images, date, start_time, end_time, location, capacity, description, event_format, categories_id, community_id
+-- GET ORGANIZER EVENT
+SELECT
+    e.id_event,
+    e.title,
+    e.images,
+    e.start_time,
+    e.end_time,
+    e.location,
+    e.attendees,
+    e.capacity,
+    e.description,
+    e.event_format
+FROM events e
+JOIN community c
+    ON c.id_community = e.community_id
+WHERE c.users_id = $1
+ORDER BY e.start_time ASC;
+
+
+-- CREATE EVENT
+INSERT INTO events (
+    title,
+    images,
+    start_time,
+    end_time,
+    location,
+    capacity,
+    description,
+    event_format,
+    community_id
 )
--- edit
-UPDATE events e
-SET title = $1, images = $2, date = $3, start_time = $4, end_time = $5, location = $6, capacity = $7, description = $8, event_format = $9, categories_id = $10
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id_event;
 
 
--- 20 Get Admin Dashboard & Information
-SELECT COUNT(*) AS "TOTAL USERS"
+-- EDIT EVENT
+UPDATE events
+SET
+    title = $1,
+    images = $2,
+    start_time = $3,
+    end_time = $4,
+    location = $5,
+    capacity = $6,
+    description = $7,
+    event_format = $8
+WHERE id_event = $9
+RETURNING
+    id_event,
+    title,
+    images,
+    start_time,
+    end_time,
+    location,
+    capacity,
+    description,
+    event_format;
+
+
+-- ADD EVENT CATEGORY
+INSERT INTO event_categories (
+    event_id,
+    category_id
+)
+VALUES ($1, $2);
+
+
+-- ADD EVENT SPEAKER
+INSERT INTO event_speakers (
+    event_id,
+    speaker_id
+)
+VALUES ($1, $2);
+
+
+-- GET ADMIN TOTAL USERS
+SELECT COUNT(*)
 FROM users;
 
-SELECT COUNT(*) AS "TOTAL EVENTS"
+
+-- GET ADMIN TOTAL EVENTS
+SELECT COUNT(*)
 FROM events;
 
-SELECT COUNT(*) AS "TOTAL COMMUNITES"
+
+-- GET ADMIN TOTAL COMMUNITIES
+SELECT COUNT(*)
 FROM community;
 
-SELECT
-    ROUND(
-        SUM(attendees) * 100 / SUM(capacity)
-    ) AS "AVG FILL RATE"
-FROM events;
+
+-- GET ADMIN TOTAL EVENT MEMBERS
+SELECT COUNT(*)
+FROM user_event;
+
+
+-- GET ADMIN TOTAL COMMUNITY MEMBERS
+SELECT COUNT(*)
+FROM community_members;
